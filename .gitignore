@@ -3,3 +3,5 @@
 *.o
 *.mod
 _*
+particle_movement.gif
+plot_particle_movement.gpl
