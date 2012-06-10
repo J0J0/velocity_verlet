@@ -17,7 +17,7 @@ unset key
 
 PREAMBLE
 
-for ((i=0; i < framecount; i+=2)); do
+for ((i=0; i < framecount; i+=1)); do
     print "plot 'output/frames.txt' index $i using 2:3:(1+\$0) with points pt 6 lc variable" 
 done >> $outfile
 

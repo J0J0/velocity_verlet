@@ -8,7 +8,8 @@ FC       = gfortran
 GDEBUG   = -g
 OMP      = -fopenmp
 OPTIMIZE = -O0
-FFLAGS   = $(GDEBUG) $(OPTIMIZE) -fimplicit-none  # $(OMP)
+FOTHER   =
+FFLAGS   = $(GDEBUG) -fdefault-real-8 $(OPTIMIZE) -fimplicit-none $(FOTHER)  # $(OMP)
 
 all : $(PROGRAMS) underscorify
 
@@ -33,6 +34,7 @@ clean:
 cleanoutput:
 	rm -f output/particle_*.txt
 	rm -f output/frames.txt output/frames_info.txt
+	rm -f output/energy.txt
 
 cleanall: clean cleanoutput
 	rm -f $(PROGRAMS)
