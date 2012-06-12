@@ -11,13 +11,13 @@ cat << PREAMBLE > $outfile
 #!/usr/bin/env gnuplot
 set term gif size 800, 600 animate delay 2 loop 1
 set output "particle_movement.gif"
-set xrange [0:1]
-set yrange [0:1]
+set xrange [0:5]
+set yrange [0:5]
 unset key
 
 PREAMBLE
 
-for ((i=0; i < framecount; i+=1)); do
+for ((i=0; i < framecount; i+=2)); do
     print "plot 'output/frames.txt' index $i using 2:3:(1+\$0) with points pt 6 lc variable" 
 done >> $outfile
 

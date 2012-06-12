@@ -8,7 +8,7 @@ program velocity_verlet_algorithm
     integer, parameter          ::  rk      = 8,    &
                                     foffset = 20,   &
                                     dims    = 2
-    real(rk), parameter         ::  tmax    = 0.10
+    real(rk), parameter         ::  tmax    = 5.10
     
     integer                     ::  i, j, n
     integer                     ::  loop_count
@@ -47,12 +47,13 @@ program velocity_verlet_algorithm
     deallocate(seed)
     
     lbounds = 0.0
-    ubounds = 1.0
+    ubounds = 5.0
 
     call random_number(r)
+    r = 5.0*r
     call random_number(v)
     !v = 0.0
-    a = 0.0
+    a = 0
     
     pot = 0
     kin = 0
@@ -72,10 +73,10 @@ program velocity_verlet_algorithm
     energy = pot + kin
     energy_init = energy
     
-    t  = 0.0
-    dt = 1e-9
+    t  = 0
+    dt = 1e-8
     write_t  = 0
-    write_dt = 0.005
+    write_dt = 0.010
     
     do i = 1, n
         write(foffset+i, *) t, r(:,i)
@@ -145,8 +146,9 @@ program velocity_verlet_algorithm
     end do
     
     print *, "energy errors:"
-    print *, " av. abs. err: ", energy_err_acum/loop_count
-    print *, "max. abs. err: ", energy_err_max
+    print *, "E(tmax) - E(0): ", energy - energy_init
+    print *, "  av. abs. err: ", energy_err_acum/loop_count
+    print *, " max. abs. err: ", energy_err_max
     
 end program
 
