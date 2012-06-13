@@ -1,7 +1,7 @@
 #!/bin/zsh
 # vim: ft=zsh
 
-[[ -r output/frames.txt && -r output/frames_info.txt ]] || exit
+[[ -r output/frames.dat && -r output/frames_info.txt ]] || exit
 # get frame count as $framecount
 source output/frames_info.txt
 
@@ -18,6 +18,6 @@ unset key
 PREAMBLE
 
 for ((i=0; i < framecount; i+=2)); do
-    print "plot 'output/frames.txt' index $i using 2:3:(1+\$0) with points pt 6 lc variable" 
+    print "plot 'output/frames.dat' index $i using 2:3:(1+\$0) with points pt 6 lc variable" 
 done >> $outfile
 

@@ -1,18 +1,12 @@
 
-#ifndef M_PI_2
-#define M_PI_2 (1.57079632679489661923_rk)
-#endif
-
 program velocity_verlet_algorithm
-    
-    integer, parameter          ::  rk      = 8,    &
-                                    foffset = 20,   &
-                                    dims    = 2
-    real(rk), parameter         ::  tmax    = 5.10
+    use Global
+    use Helpers
     
     integer                     ::  i, j, n
-    integer                     ::  loop_count
+    integer(8)                  ::  loop_count
     real(rk)                    ::  t, dt, write_t, write_dt 
+    real(rk)                    ::  tmax
     
     real(rk), dimension(:,:)    ::  r, v, a, a_old
     allocatable                 ::  r, v, a, a_old
@@ -22,46 +16,40 @@ program velocity_verlet_algorithm
     real(rk)                    ::  kin, pot, energy, energy_old
     real(rK)                    ::  energy_init, energy_err_acum, energy_err_max
 
-    integer                     ::  stat, sysclock, seed_size
-    integer, allocatable        ::  seed(:)
-    character(4)                ::  arg
-    character(32)               ::  tmp_file_str
-    
-    call get_command_argument(1, arg, status=stat)
-    if(stat /= 0) stop 1
-    read(arg, *) n
-    allocate(r(dims,n), v(dims,n), a(dims,n), a_old(dims,n))
-    
-    do i = 1, n
-        write(tmp_file_str, "(a,i0.4,a)") "output/particle_", i, ".txt"
-        open(foffset+i, file=trim(tmp_file_str), status='replace')
-    end do
-    
-    open(foffset, file="output/energy.txt", status='replace')
-    
-    call system_clock(count=sysclock)
-    call random_seed(size=seed_size)
-    allocate(seed(seed_size))
-    seed = (/ (sysclock+i, i=1,seed_size) /)
-    call random_seed(put=seed)
-    deallocate(seed)
+    ! set the simulation parameters
+    ! (hardcoded within the source for now)
+    t    = 0
+    dt   = 1e-8
+    tmax = 5.10
+    write_t  = t
+    write_dt = 0.01
     
     lbounds = 0.0
     ubounds = 5.0
-
-    call random_number(r)
-    r = 5.0*r
-    call random_number(v)
-    !v = 0.0
-    a = 0
     
+    ! get particle count from first cmd line argument
+    ! and allocate all arrays
+    call get_particle_count(n)
+    allocate(r(dims,n), v(dims,n), a(dims,n), a_old(dims,n))
+    
+    ! initialize the intern RNG
+    call init_rand()
+
+    ! open the data (output) files
+    call open_files(n)
+    
+    ! set initial values for r, v and a
+    ! (see Helpers module)
+    call init_rva(r, v, a, lbounds, ubounds)
+   
+    ! calculate the initial energy
     pot = 0
     kin = 0
     do i = 1, n
         do j = i+1, n
             rij  = r(:,j) - r(:,i)
             d    = sqrt(sum(rij * rij))
-            dcut = min(d,M_PI_2)
+            dcut = min(d,pi_2)
             pot  = pot - sin(dcut)*sin(dcut)
             force_ij = sin(2.0*dcut) * rij/d
             
@@ -70,33 +58,35 @@ program velocity_verlet_algorithm
         end do
         kin = kin + 0.5*sum(v(:,i)*v(:,i))
     end do
-    energy = pot + kin
+    energy      = pot + kin
     energy_init = energy
     
-    t  = 0
-    dt = 1e-8
-    write_t  = 0
-    write_dt = 0.010
+    ! and write it to the file
+    call write_energy(t, energy, 0.0, 0.0)
     
-    do i = 1, n
-        write(foffset+i, *) t, r(:,i)
-    end do
-    write(foffset, *) t, energy, 0.0, 0.0
-    
+    ! initally we've got no errors at all
     energy_err_acum = 0
     energy_err_max  = 0
+   
+    ! reset the loop counter and start the main loop
     loop_count = 0
     do
+        ! increment the time and leave the main loop if tmax reached
         t = t + dt
         if( t > tmax ) exit
         loop_count = loop_count + 1
-        
+       
+        ! reset energy accumulators
         pot = 0
         kin = 0
         
+        ! update positions (r)
+        ! (and clear the acceleration)
+        ! also write r to file if neccessary
         do i = 1, n
             r(:,i) = r(:,i) + v(:,i)*dt + 0.5*a(:,i)*dt*dt
             
+            ! boundary checks
             do j = 1, dims
                 if( r(j,i) <= lbounds(j) ) then
                     r(j,i) = 2.0*lbounds(j) - r(j,i)
@@ -106,19 +96,20 @@ program velocity_verlet_algorithm
                     v(j,i) = -v(j,i)
                 end if
             end do
-
+            
             a_old(:,i) = a(:,i)
             a(:,i) = 0
             
-            if( t > write_t ) &
-                write(foffset+i, *) t, r(:,i)
+            if( t >= write_t ) &
+                call write_single_particle(t, i, r(:,i))
         end do
         
+        ! update accelerations (a) and pot energy
         do i = 1, n
             do j = i+1, n
                 rij  = r(:,j) - r(:,i)
                 d    = sqrt(sum(rij * rij))
-                dcut = min(d,M_PI_2)
+                dcut = min(d,pi_2)
                 pot  = pot - sin(dcut)*sin(dcut)
                 force_ij = sin(2.0*dcut) * rij/d
                 
@@ -127,23 +118,27 @@ program velocity_verlet_algorithm
             end do
         end do
         
+        ! update velocities (v) and kin energy
         do i = 1, n
             v(:,i) = v(:,i) + 0.5*(a_old(:,i)+a(:,i))*dt
             kin = kin + 0.5*sum(v(:,i)*v(:,i))
         end do
         
+        ! recompute energy (errors)
         energy_old = energy
         energy = pot + kin
         energy_err_acum = energy_err_acum + abs(energy-energy_init)
         energy_err_max  = max(abs(energy-energy_init), energy_err_max)
         
-        if( t > write_t) then
-            write(foffset, *) t, energy, (energy-energy_init), abs(energy-energy_old)
+        ! write energy values to file (and increment write_t) if neccessary
+        if( t >= write_t) then
+            call write_energy(t, energy, (energy-energy_init), abs(energy-energy_old))
             
             write_t = write_t + write_dt
         end if
         
     end do
+    ! end of main loop
     
     print *, "energy errors:"
     print *, "E(tmax) - E(0): ", energy - energy_init

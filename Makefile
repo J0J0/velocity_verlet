@@ -5,15 +5,15 @@
 PROGRAMS = velocity_verlet_algorithm
 
 FC       = gfortran
-GDEBUG   = -g
+GDEBUG   =             # -g
 OMP      = -fopenmp
-OPTIMIZE = -O0
+OPTIMIZE = -O2
 FOTHER   =
-FFLAGS   = $(GDEBUG) -fdefault-real-8 $(OPTIMIZE) -fimplicit-none $(FOTHER)  # $(OMP)
+FFLAGS   = $(GDEBUG) -fdefault-real-8 -fimplicit-none $(OPTIMIZE) $(FOTHER)  # $(OMP)
 
 all : $(PROGRAMS) underscorify
 
-%: %.o
+velocity_verlet_algorithm: global.o helpers.o velocity_verlet_algorithm.o
 	$(FC) $(FFLAGS) -o $@ $^
 
 %.o: %.F90

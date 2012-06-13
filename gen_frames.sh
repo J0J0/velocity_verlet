@@ -2,14 +2,14 @@
 # vim: ft=zsh
 
 # particle count n
-n=$(print output/particle_*.txt(N) | wc -w)
+n=$(print output/particle_*.dat(N) | wc -w)
 [[ $n -ge 1 ]] || exit
 # frame count m
 m=0
 
 fids=()
 for ((i=1; i <= n; i++)); do
-    tmpname=output/particle_$(printf '%04i' $i).txt
+    tmpname=output/particle_$(printf '%04i' $i).dat
     exec {tmpid}<$tmpname
     fids+=$tmpid
 done
@@ -24,7 +24,7 @@ do
     print
     print
     let m++
-done > output/frames.txt
+done > output/frames.dat
 
 for ((i=1; i <= n; i++)) do 
     tmpid=$fids[$i]
