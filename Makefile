@@ -32,9 +32,9 @@ clean:
 	rm -f *.o *.mod
 
 cleanoutput:
-	rm -f output/particle_*.txt
-	rm -f output/frames.txt output/frames_info.txt
-	rm -f output/energy.txt
+	rm -f output/particle_*.dat
+	rm -f output/frames.dat output/frames_info.txt
+	rm -f output/energy.dat
 
 cleanall: clean cleanoutput
 	rm -f $(PROGRAMS)
