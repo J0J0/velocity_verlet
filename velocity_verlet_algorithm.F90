@@ -19,8 +19,8 @@ program velocity_verlet_algorithm
     ! set the simulation parameters
     ! (hardcoded within the source for now)
     t    = 0
-    dt   = 1e-8
-    tmax = 5.10
+    dt   = 1e-07
+    tmax =  0.01
     write_t  = t
     write_dt = 0.01
     
@@ -67,22 +67,34 @@ program velocity_verlet_algorithm
     ! initally we've got no errors at all
     energy_err_acum = 0
     energy_err_max  = 0
-   
+    
     ! reset the loop counter and start the main loop
     loop_count = 0
-    do
-        ! increment the time and leave the main loop if tmax reached
+    
+    !$omp parallel default(none)                                &
+    !$omp shared(loop_count,t,dt,tmax,write_t,write_dt)         &
+    !$omp shared(r,v,a,a_old)                                   &
+    !$omp shared(n,lbounds,ubounds)                             &
+    !$omp shared(pot,kin,energy,energy_init)                    &
+    !$omp shared(energy_old,energy_err_acum,energy_err_max)
+    
+    do while( t < tmax )
+        !$omp single
+        
+        ! increment the time
         t = t + dt
-        if( t > tmax ) exit
         loop_count = loop_count + 1
        
         ! reset energy accumulators
-        pot = 0
-        kin = 0
-        
+        pot = 0  
+        kin = 0 
+
+        !$omp end single
+                
         ! update positions (r)
         ! (and clear the acceleration)
         ! also write r to file if neccessary
+        !$omp do private(i,j)
         do i = 1, n
             r(:,i) = r(:,i) + v(:,i)*dt + 0.5*a(:,i)*dt*dt
             
@@ -98,13 +110,15 @@ program velocity_verlet_algorithm
             end do
             
             a_old(:,i) = a(:,i)
-            a(:,i) = 0
+            a(:,i) = 0  
             
             if( t >= write_t ) &
                 call write_single_particle(t, i, r(:,i))
         end do
+        !$omp end do
         
         ! update accelerations (a) and pot energy
+        !$omp do private(i,j,rij,d,dcut,force_ij) reduction(+:a,pot)
         do i = 1, n
             do j = i+1, n
                 rij  = r(:,j) - r(:,i)
@@ -117,12 +131,18 @@ program velocity_verlet_algorithm
                 a(:,j) = a(:,j) - force_ij
             end do
         end do
+        !$omp end do
         
         ! update velocities (v) and kin energy
+        !$omp do private(i) reduction(+:kin)
         do i = 1, n
             v(:,i) = v(:,i) + 0.5*(a_old(:,i)+a(:,i))*dt
             kin = kin + 0.5*sum(v(:,i)*v(:,i))
         end do
+        !$omp end do
+        
+        !$omp flush
+        !$omp single
         
         ! recompute energy (errors)
         energy_old = energy
@@ -137,7 +157,12 @@ program velocity_verlet_algorithm
             write_t = write_t + write_dt
         end if
         
+        !$omp end single
+        
     end do
+
+    !$omp end parallel
+
     ! end of main loop
     
     print *, "energy errors:"

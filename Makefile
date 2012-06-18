@@ -9,7 +9,7 @@ GDEBUG   =             # -g
 OMP      = -fopenmp
 OPTIMIZE = -O2
 FOTHER   =
-FFLAGS   = $(GDEBUG) -fdefault-real-8 -fimplicit-none $(OPTIMIZE) $(FOTHER)  # $(OMP)
+FFLAGS   = $(GDEBUG) -fdefault-real-8 -fimplicit-none $(OPTIMIZE) $(FOTHER) $(OMP)
 
 all : $(PROGRAMS) underscorify
 
