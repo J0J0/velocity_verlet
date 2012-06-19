@@ -19,8 +19,8 @@ program velocity_verlet_algorithm
     ! set the simulation parameters
     ! (hardcoded within the source for now)
     t    = 0
-    dt   = 1e-8
-    tmax = 5.10
+    dt   = 1e-7
+    tmax = 0.01
     write_t  = t
     write_dt = 0.01
     
@@ -83,6 +83,7 @@ program velocity_verlet_algorithm
         ! update positions (r)
         ! (and clear the acceleration)
         ! also write r to file if neccessary
+        !$omp parallel do default(shared) private(i,j)
         do i = 1, n
             r(:,i) = r(:,i) + v(:,i)*dt + 0.5*a(:,i)*dt*dt
             
@@ -103,8 +104,11 @@ program velocity_verlet_algorithm
             if( t >= write_t ) &
                 call write_single_particle(t, i, r(:,i))
         end do
+        !$omp end parallel do
         
         ! update accelerations (a) and pot energy
+        !$omp parallel do default(shared) &
+        !$omp private(i,j,rij,d,dcut,force_ij) reduction(+:a,pot)
         do i = 1, n
             do j = i+1, n
                 rij  = r(:,j) - r(:,i)
@@ -117,12 +121,15 @@ program velocity_verlet_algorithm
                 a(:,j) = a(:,j) - force_ij
             end do
         end do
+        !$omp end parallel do
         
         ! update velocities (v) and kin energy
+        !$omp parallel do default(shared) private(i) reduction(+:kin)
         do i = 1, n
             v(:,i) = v(:,i) + 0.5*(a_old(:,i)+a(:,i))*dt
             kin = kin + 0.5*sum(v(:,i)*v(:,i))
         end do
+        !$omp end parallel do
         
         ! recompute energy (errors)
         energy_old = energy
